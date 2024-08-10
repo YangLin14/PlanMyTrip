@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Stack, TextField, Button, Typography } from "@mui/material";
 import Head from "next/head";
+import ReactMarkdown from "react-markdown"; // Import ReactMarkdown for rendering markdown
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
@@ -86,7 +87,7 @@ export default function ChatPage() {
             width={50}
             height={50}
             marginRight={1}
-            borderRadius="10%" // Added to round the corners
+            borderRadius="10%"
           />
           <Typography variant="h4">PlanMyTrip</Typography>
         </Box>
@@ -113,7 +114,7 @@ export default function ChatPage() {
                 {msg.role === "assistant" && (
                   <Box
                     component="img"
-                    src="genie.png" // Changed href to src
+                    src="genie.png"
                     alt="Assistant"
                     width={40}
                     height={40}
@@ -129,7 +130,8 @@ export default function ChatPage() {
                   borderRadius={16}
                   p={3}
                 >
-                  {msg.content}
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>{" "}
+                  {/* Render markdown content */}
                 </Box>
 
                 {/* User Picture */}
