@@ -1,15 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Box, Stack, TextField, Button } from "@mui/material";
-import Groq from "groq-sdk"; // Use ES6 import syntax
-
-const groq = new Groq({
-  apiKey:
-    process.env.GROQ_API_KEY ||
-    "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",
-  dangerouslyAllowBrowser: true,
-});
+import { useState, useEffect, useRef } from "react";
+import { Box, Stack, TextField, Button, Typography } from "@mui/material";
+import Head from "next/head";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
@@ -21,106 +14,164 @@ export default function ChatPage() {
   ]);
 
   const [message, setMessage] = useState("");
+  const messagesEndRef = useRef(null);
 
   const sendMessage = async () => {
-    if (!message.trim()) return; // Prevent sending empty messages
-
-    setMessages((prevMessages) => [
-      ...prevMessages,
+    setMessage("");
+    setMessages((messages) => [
+      ...messages,
       { role: "user", content: message },
       { role: "assistant", content: "" },
     ]);
-    setMessage("");
+    const response = fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([...messages, { role: "user", content: message }]),
+    }).then(async (res) => {
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [...messages, { role: "user", content: message }],
-      model: "llama3-70b-8192",
-      temperature: 1,
-      max_tokens: 1024,
-      top_p: 1,
-      stream: true,
-      stop: null,
+      let result = "";
+      return reader.read().then(function proccessText({ done, value }) {
+        if (done) {
+          return result;
+        }
+        const text = decoder.decode(value || new Int8Array(), { stream: true });
+        setMessages((messages) => {
+          let lastMessage = messages[messages.length - 1];
+          let otherMessages = messages.slice(0, messages.length - 1);
+          return [
+            ...otherMessages,
+            {
+              ...lastMessage,
+              content: lastMessage.content + text,
+            },
+          ];
+        });
+        return reader.read().then(proccessText);
+      });
     });
-
-    const decoder = new TextDecoder();
-    let result = "";
-
-    for await (const chunk of chatCompletion) {
-      const text = decoder.decode(chunk.value || new Int8Array(), {
-        stream: true,
-      });
-      setMessages((prevMessages) => {
-        const lastMessage = prevMessages[prevMessages.length - 1];
-        const otherMessages = prevMessages.slice(0, prevMessages.length - 1);
-        return [
-          ...otherMessages,
-          {
-            ...lastMessage,
-            content: lastMessage.content + text,
-          },
-        ];
-      });
-    }
   };
 
+  // Auto-scroll to the bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [messages]);
+
   return (
-    <Box
-      width="100%"
-      height="100%"
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-      position="fixed"
-      top={0}
-      left={0}
-      bgcolor="white"
-    >
-      <Stack
-        direction="column"
-        width="80%" // Set width for the chatbox
-        height="70%" // Set height for the chatbox
-        border="1px solid black"
-        p={2}
-        spacing={3}
-        justifyContent="flex-start"
-        overflow="auto"
+    <>
+      <Head>
+        <link rel="icon" href="/favicon.ico" /> {/* Add favicon here */}
+      </Head>
+      <Box
+        width="100%"
+        height="100%"
+        display="flex"
+        flexDirection="column"
+        justifyContent="center"
+        alignItems="center"
+        position="fixed"
+        top={0}
+        left={0}
+        bgcolor="lightgray"
       >
-        <Stack spacing={2} flexGrow={1} overflow="auto">
-          {messages.map((msg, index) => (
-            <Box
-              key={index}
-              display="flex"
-              justifyContent={
-                msg.role === "assistant" ? "flex-start" : "flex-end"
-              }
-            >
-              <Box
-                bgcolor={
-                  msg.role === "assistant" ? "primary.main" : "secondary.main"
-                }
-                color="white"
-                borderRadius={16}
-                p={3}
-              >
-                {msg.content}
-              </Box>
-            </Box>
-          ))}
-        </Stack>
-        <Stack direction="row" spacing={2}>
-          <TextField
-            label="Type your message here..."
-            fullWidth
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Enter your message..."
+        {/* Logo and Title */}
+        <Box display="flex" alignItems="center" mb={2}>
+          <Box
+            component="img"
+            src="logo.png"
+            alt="Logo"
+            width={50}
+            height={50}
+            marginRight={1}
+            borderRadius="10%" // Added to round the corners
           />
-          <Button variant="contained" onClick={sendMessage}>
-            Send
-          </Button>
+          <Typography variant="h4">PlanMyTrip</Typography>
+        </Box>
+        <Stack
+          direction="column"
+          width="80%"
+          height="70%"
+          p={2}
+          spacing={3}
+          justifyContent="flex-start"
+          overflow="auto"
+        >
+          <Stack spacing={2} flexGrow={1} overflow="auto">
+            {messages.map((msg, index) => (
+              <Box
+                key={index}
+                display="flex"
+                justifyContent={
+                  msg.role === "assistant" ? "flex-start" : "flex-end"
+                }
+                alignItems="center"
+              >
+                {/* TripGenie Picture */}
+                {msg.role === "assistant" && (
+                  <Box
+                    component="img"
+                    src="genie.png" // Changed href to src
+                    alt="Assistant"
+                    width={40}
+                    height={40}
+                    borderRadius="10%"
+                    marginRight={1}
+                  />
+                )}
+                <Box
+                  bgcolor={
+                    msg.role === "assistant" ? "primary.main" : "secondary.main"
+                  }
+                  color="white"
+                  borderRadius={16}
+                  p={3}
+                >
+                  {msg.content}
+                </Box>
+
+                {/* User Picture */}
+                {msg.role === "user" && (
+                  <Box
+                    component="img"
+                    src="profile-pic.png"
+                    alt="User"
+                    width={40}
+                    height={40}
+                    borderRadius="10%"
+                    marginLeft={1}
+                  />
+                )}
+              </Box>
+            ))}
+            <div ref={messagesEndRef} /> {/* Scroll target */}
+          </Stack>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ position: "relative", bottom: 0, left: 0, right: 0 }}
+          >
+            <TextField
+              label="Type your message here..."
+              fullWidth
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Enter your message..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault(); // Prevent the default action (like a new line)
+                  sendMessage();
+                }
+              }}
+            />
+            <Button variant="contained" onClick={sendMessage}>
+              Send
+            </Button>
+          </Stack>
         </Stack>
-      </Stack>
-    </Box>
+      </Box>
+    </>
   );
 }
