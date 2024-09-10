@@ -1,9 +1,16 @@
 "use client";
-
-import { useState, useEffect, useRef } from "react";
-import { Box, Stack, TextField, Button, Typography } from "@mui/material";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Box,
+  Stack,
+  TextField,
+  Button,
+  Typography,
+  Paper,
+  Container,
+} from "@mui/material";
 import Head from "next/head";
-import ReactMarkdown from "react-markdown"; // Import ReactMarkdown for rendering markdown
+import ReactMarkdown from "react-markdown";
 
 export default function ChatPage() {
   const [messages, setMessages] = useState([
@@ -13,167 +20,241 @@ export default function ChatPage() {
         "Hi, I'm here to help with your packing list and recommend places to go! How can I assist you today?",
     },
   ]);
-
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef(null);
 
   const sendMessage = async () => {
+    if (!message.trim()) return;
+
     setMessage("");
-    setMessages((messages) => [
-      ...messages,
+    setMessages((prevMessages) => [
+      ...prevMessages,
       { role: "user", content: message },
       { role: "assistant", content: "" },
     ]);
-    const response = fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([...messages, { role: "user", content: message }]),
-    }).then(async (res) => {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
 
-      let result = "";
-      return reader.read().then(function proccessText({ done, value }) {
-        if (done) {
-          return result;
-        }
-        const text = decoder.decode(value || new Int8Array(), { stream: true });
-        setMessages((messages) => {
-          let lastMessage = messages[messages.length - 1];
-          let otherMessages = messages.slice(0, messages.length - 1);
-          return [
-            ...otherMessages,
-            {
-              ...lastMessage,
-              content: lastMessage.content + text,
-            },
-          ];
-        });
-        return reader.read().then(proccessText);
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify([...messages, { role: "user", content: message }]),
       });
-    });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let partialResponse = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        partialResponse += chunk;
+
+        // Update the last message with the accumulated response
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages];
+          updatedMessages[updatedMessages.length - 1].content = partialResponse;
+          return updatedMessages;
+        });
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
   };
 
-  // Auto-scroll to the bottom when messages change
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
     <>
       <Head>
-        <link rel="icon" href="/favicon.ico" /> {/* Add favicon here */}
+        <title>PlanMyTrip Chat</title>
+        <link rel="icon" href="/favicon.ico" />
       </Head>
-      <Box
-        width="100%"
-        height="100%"
-        display="flex"
-        flexDirection="column"
-        justifyContent="center"
-        alignItems="center"
-        position="fixed"
-        top={0}
-        left={0}
-        bgcolor="lightgray"
+      <Container
+        maxWidth="md"
+        sx={{
+          height: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          py: 4,
+        }}
       >
-        {/* Logo and Title */}
-        <Box display="flex" alignItems="center" mb={2}>
-          <Box
-            component="img"
-            src="logo.png"
-            alt="Logo"
-            width={50}
-            height={50}
-            marginRight={1}
-            borderRadius="10%"
-          />
-          <Typography variant="h4">PlanMyTrip</Typography>
-        </Box>
-        <Stack
-          direction="column"
-          width="80%"
-          height="70%"
-          p={2}
-          spacing={3}
-          justifyContent="flex-start"
-          overflow="auto"
+        <Paper
+          elevation={3}
+          sx={{
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
         >
-          <Stack spacing={2} flexGrow={1} overflow="auto">
-            {messages.map((msg, index) => (
-              <Box
-                key={index}
-                display="flex"
-                justifyContent={
-                  msg.role === "assistant" ? "flex-start" : "flex-end"
-                }
-                alignItems="center"
-              >
-                {/* TripGenie Picture */}
-                {msg.role === "assistant" && (
-                  <Box
-                    component="img"
-                    src="genie.png"
-                    alt="Assistant"
-                    width={40}
-                    height={40}
-                    borderRadius="10%"
-                    marginRight={1}
-                  />
-                )}
-                <Box
-                  bgcolor={
-                    msg.role === "assistant" ? "primary.main" : "secondary.main"
-                  }
-                  color="white"
-                  borderRadius={16}
-                  p={3}
-                >
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>{" "}
-                  {/* Render markdown content */}
-                </Box>
-
-                {/* User Picture */}
-                {msg.role === "user" && (
-                  <Box
-                    component="img"
-                    src="profile-pic.png"
-                    alt="User"
-                    width={40}
-                    height={40}
-                    borderRadius="10%"
-                    marginLeft={1}
-                  />
-                )}
-              </Box>
-            ))}
-            <div ref={messagesEndRef} /> {/* Scroll target */}
-          </Stack>
-          <Stack
-            direction="row"
-            spacing={2}
-            sx={{ position: "relative", bottom: 0, left: 0, right: 0 }}
+          <Box
+            sx={{
+              p: 2,
+              borderBottom: 1,
+              borderColor: "divider",
+              display: "flex",
+              alignItems: "center",
+            }}
           >
-            <TextField
-              label="Type your message here..."
-              fullWidth
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter your message..."
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault(); // Prevent the default action (like a new line)
-                  sendMessage();
-                }
-              }}
+            <Box
+              component="img"
+              src="logo.png"
+              alt="Logo"
+              sx={{ width: 40, height: 40, mr: 2, borderRadius: "10%" }}
             />
-            <Button variant="contained" onClick={sendMessage}>
-              Send
-            </Button>
-          </Stack>
-        </Stack>
-      </Box>
+            <Typography variant="h5" component="h1">
+              PlanMyTrip
+            </Typography>
+          </Box>
+
+          <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
+            <Stack spacing={2}>
+              {messages.map((msg, index) => (
+                <Box
+                  key={index}
+                  sx={{
+                    display: "flex",
+                    justifyContent:
+                      msg.role === "assistant" ? "flex-start" : "flex-end",
+                    mb: 2,
+                  }}
+                >
+                  {msg.role === "assistant" && (
+                    <Box
+                      component="img"
+                      src="genie.png"
+                      alt="Assistant"
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        mr: 1,
+                        alignSelf: "flex-start",
+                      }}
+                    />
+                  )}
+                  <Paper
+                    elevation={1}
+                    sx={{
+                      p: 2,
+                      maxWidth: "70%",
+                      bgcolor:
+                        msg.role === "assistant"
+                          ? "primary.light"
+                          : "secondary.light",
+                      borderRadius:
+                        msg.role === "assistant"
+                          ? "20px 20px 20px 5px"
+                          : "20px 20px 5px 20px",
+                    }}
+                  >
+                    <ReactMarkdown
+                      components={{
+                        p: ({ node, ...props }) => (
+                          <Typography variant="body1" gutterBottom {...props} />
+                        ),
+                        h1: ({ node, ...props }) => (
+                          <Typography variant="h5" gutterBottom {...props} />
+                        ),
+                        h2: ({ node, ...props }) => (
+                          <Typography variant="h6" gutterBottom {...props} />
+                        ),
+                        ul: ({ node, ...props }) => (
+                          <ul
+                            style={{ paddingLeft: 20, marginBottom: 16 }}
+                            {...props}
+                          />
+                        ),
+                        ol: ({ node, ...props }) => (
+                          <ol
+                            style={{ paddingLeft: 20, marginBottom: 16 }}
+                            {...props}
+                          />
+                        ),
+                        li: ({ node, ...props }) => (
+                          <li style={{ marginBottom: 8 }} {...props} />
+                        ),
+                        code: ({ node, inline, ...props }) =>
+                          inline ? (
+                            <code
+                              style={{
+                                backgroundColor: "#f0f0f0",
+                                padding: "2px 4px",
+                                borderRadius: 4,
+                              }}
+                              {...props}
+                            />
+                          ) : (
+                            <Box
+                              component="pre"
+                              sx={{
+                                backgroundColor: "#f0f0f0",
+                                p: 2,
+                                borderRadius: 1,
+                                overflowX: "auto",
+                              }}
+                            >
+                              <code {...props} />
+                            </Box>
+                          ),
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </Paper>
+                  {msg.role === "user" && (
+                    <Box
+                      component="img"
+                      src="profile-pic.png"
+                      alt="User"
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        ml: 1,
+                        alignSelf: "flex-start",
+                      }}
+                    />
+                  )}
+                </Box>
+              ))}
+              <div ref={messagesEndRef} />
+            </Stack>
+          </Box>
+
+          <Box sx={{ p: 2, borderTop: 1, borderColor: "divider" }}>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+            >
+              <Stack direction="row" spacing={2}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="Type your message here..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  InputProps={{ sx: { borderRadius: "20px" } }}
+                />
+                <Button
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  sx={{ borderRadius: "20px", px: 3 }}
+                >
+                  Send
+                </Button>
+              </Stack>
+            </form>
+          </Box>
+        </Paper>
+      </Container>
     </>
   );
 }
