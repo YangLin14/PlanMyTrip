@@ -2,6 +2,8 @@
 
 PlanMyTrip is a modern web application built with Next.js that helps travelers organize and plan their journeys with ease. The application provides an intuitive interface for creating, managing, and sharing trip itineraries.
 
+![PlanMyTrip Demo](public/live-demo.png)
+
 ## Overview
 
 Built with the latest web technologies, PlanMyTrip offers:
@@ -58,6 +60,8 @@ app/
    ```
 
 3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+4. View a live demo: [https://plan-my-trip-ai.vercel.app/](https://plan-my-trip-ai.vercel.app/) (this is without API Key)
 
 ## Environment Variables
 
