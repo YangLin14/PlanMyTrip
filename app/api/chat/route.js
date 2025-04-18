@@ -1,58 +1,56 @@
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextResponse } from "next/server";
-import Groq from "groq-sdk";
 
-const { TextEncoder } = require("node:util");
-
-const systemPrompt = `
-  Your name is TripGenie, an AI travel assistant designed to help users effortlessly plan and prepare for their trips.
-  Your role is to provide personalized itinerary suggestions, offer packing and preparation tips, and assist with important travel logistics like booking accommodations, arranging transportation, and ensuring essential documents are in order.
-  Your goal is to make travel planning stress-free, ensuring users are fully prepared and can focus on enjoying their journey.
-  Adapt your recommendations to the user's specific travel needs and preferences, while maintaining a friendly and supportive tone.
-  `;
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
 export async function POST(req) {
-  const groq = new Groq({
-    apiKey:
-      process.env.GROQ_API_KEY ||
-      "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",
-    dangerouslyAllowBrowser: true,
-  });
-  const data = await req.json();
-
-  const chatCompletion = await groq.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: systemPrompt,
+  try {
+    const { messages } = await req.json();
+    
+    // Initialize the model
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
       },
-      ...data,
-    ],
-    model: "llama3-70b-8192",
-    temperature: 1,
-    max_tokens: 1024,
-    top_p: 1,
-    stream: true,
-    stop: null,
-  });
+    });
 
-  const stream = new ReadableStream({
-    async pull(controller) {
-      const encoder = new TextEncoder();
-      try {
-        for await (const chunk of chatCompletion) {
-          const content = chunk.choices[0]?.delta?.content;
-          if (content) {
-            const text = encoder.encode(content);
-            controller.enqueue(text);
-          }
-        }
-      } catch (err) {
-        controller.error(err);
-      } finally {
-        controller.close();
+    // Format the conversation into a single prompt
+    const formattedMessages = messages.map(msg => {
+      if (msg.role === "system") {
+        return msg.content + "\n\n";
       }
-    },
-  });
+      return `${msg.role === "user" ? "Human" : "Assistant"}: ${msg.content}\n`;
+    }).join("\n");
 
-  return new NextResponse(stream);
+    // Add a prompt for the assistant to respond
+    const fullPrompt = `${formattedMessages}\nAssistant: I am Tribe, your AI travel assistant. `;
+
+    try {
+      // Generate response
+      const result = await model.generateContent(fullPrompt);
+      const response = await result.response;
+      let text = response.text();
+
+      // Clean up the response if it starts with "Assistant:"
+      if (text.startsWith("Assistant:")) {
+        text = text.substring("Assistant:".length).trim();
+      }
+
+      return NextResponse.json({ content: text });
+    } catch (error) {
+      console.error("Generation error:", error);
+      return NextResponse.json(
+        { error: "Failed to generate response" },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error("Request error:", error);
+    return NextResponse.json(
+      { error: "Failed to process request" },
+      { status: 500 }
+    );
+  }
 }

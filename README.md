@@ -1,37 +1,69 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# PlanMyTrip
+
+PlanMyTrip is a modern web application built with Next.js that helps travelers organize and plan their journeys with ease. The application provides an intuitive interface for creating, managing, and sharing trip itineraries.
+
+## Overview
+
+Built with the latest web technologies, PlanMyTrip offers:
+
+- **Smart Trip Planning**: Create and organize detailed travel itineraries
+- **Interactive Interface**: User-friendly design for seamless trip management
+- **Modern Architecture**: Built with Next.js, TypeScript, and Material-UI
+- **Responsive Design**: Fully functional across all devices and screen sizes
+
+## Tech Stack
+
+- **Frontend**: Next.js, React, TypeScript
+- **Styling**: Material-UI, CSS Modules
+- **State Management**: React Context API
+- **Development**: ESLint, Prettier
+
+## Project Structure
+
+The project follows a modular architecture with clear separation of concerns:
+
+```
+app/
+├── components/     # Reusable UI components
+├── api/           # API routes
+├── lib/           # Third-party library configurations
+├── styles/        # Global styles and theme
+├── types/         # TypeScript type definitions
+├── hooks/         # Custom React hooks
+├── utils/         # Utility functions
+└── constants/     # Constant values and configurations
+```
+
+## Directory Purposes
+
+- `components/`: React components that are reused across pages
+- `api/`: API route handlers for backend functionality
+- `lib/`: Third-party library configurations and setup
+- `styles/`: Global styles, theme configurations, and CSS modules
+- `types/`: TypeScript type definitions and interfaces
+- `hooks/`: Custom React hooks for shared logic
+- `utils/`: Helper functions and utilities
+- `constants/`: Constant values, configurations, and enums
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+2. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# Add your environment variables here
+GOOGLE_API_KEY=YOUR API KEY
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
-# PlanMyTrip
